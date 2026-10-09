@@ -10,7 +10,7 @@ import { Q_SCALE } from '../../types/shapeTypes';
 
 export const FOG_COLOR = 'rgba(0, 0, 0, 1)';
 
-/** Render a brush stroke as interpolated filled circles. */
+/** Render a brush stroke. */
 export function renderBrush(
   ctx: CanvasRenderingContext2D,
   op: FogBrushStroke,
@@ -23,35 +23,26 @@ export function renderBrush(
   if (points.length === 0 || Math.round(brushRadius * Q_SCALE) === 0) return;
 
   const r = brushRadius * scale;
+  ctx.lineWidth = r * 2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
   ctx.beginPath();
 
-  if (points.length === 1) {
-    const p = points[0]!;
-    const cx = (p.x + offsetX - bounds.x) * scale;
-    const cy = (p.y + offsetY - bounds.y) * scale;
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.fill();
-    return;
-  }
-
-  for (let i = 0; i < points.length - 1; i++) {
-    const p0 = points[i]!;
-    const p1 = points[i + 1]!;
-    const dx = p1.x - p0.x;
-    const dy = p1.y - p0.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    const steps = Math.max(1, Math.ceil(dist / (brushRadius * 0.4)));
-
-    for (let s = 0; s <= steps; s++) {
-      const t = s / steps;
-      const cx = (p0.x + dx * t + offsetX - bounds.x) * scale;
-      const cy = (p0.y + dy * t + offsetY - bounds.y) * scale;
-      ctx.moveTo(cx + r, cy);
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  points.forEach((p, i) => {
+    const x = (p.x + offsetX - bounds.x) * scale;
+    const y = (p.y + offsetY - bounds.y) * scale;
+    if (i === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
     }
+  });
+  if (points.length === 1 && points[0]) {
+    const x = (points[0].x + offsetX - bounds.x) * scale;
+    const y = (points[0].y + offsetY - bounds.y) * scale;
+    ctx.lineTo(x, y)
   }
-
-  ctx.fill();
+  ctx.stroke();
 }
 
 /** Render a filled lasso polygon. */
