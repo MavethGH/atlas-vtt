@@ -10,7 +10,12 @@ import { Q_SCALE } from '../../types/shapeTypes';
 
 export const FOG_COLOR = 'rgba(0, 0, 0, 1)';
 
-/** Render a brush stroke. */
+/**
+ * Render a brush stroke as one stroked path with round caps and joins: the area
+ * within the brush radius of the polyline, the shape `fogOperationShape` commits.
+ * Stamping a disc per step instead left a lattice of half-covered pixels inside
+ * dense strokes, since Canvas anti-aliases every overlapping contour edge.
+ */
 export function renderBrush(
   ctx: CanvasRenderingContext2D,
   op: FogBrushStroke,
@@ -22,26 +27,21 @@ export function renderBrush(
   const { points, brushRadius } = op;
   if (points.length === 0 || Math.round(brushRadius * Q_SCALE) === 0) return;
 
-  const r = brushRadius * scale;
-  ctx.lineWidth = r * 2;
+  const first = points[0]!;
+  const fx = (first.x + offsetX - bounds.x) * scale;
+  const fy = (first.y + offsetY - bounds.y) * scale;
+  ctx.beginPath();
+  // Canvas strokes no cap on a path of zero length, so a dab is its disc.
+  if (points.every((p) => p.x === first.x && p.y === first.y)) {
+    ctx.arc(fx, fy, brushRadius * scale, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+  ctx.moveTo(fx, fy);
+  for (const p of points) ctx.lineTo((p.x + offsetX - bounds.x) * scale, (p.y + offsetY - bounds.y) * scale);
+  ctx.lineWidth = 2 * brushRadius * scale;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-  ctx.beginPath();
-
-  points.forEach((p, i) => {
-    const x = (p.x + offsetX - bounds.x) * scale;
-    const y = (p.y + offsetY - bounds.y) * scale;
-    if (i === 0) {
-      ctx.moveTo(x, y);
-    } else {
-      ctx.lineTo(x, y);
-    }
-  });
-  if (points.length === 1 && points[0]) {
-    const x = (points[0].x + offsetX - bounds.x) * scale;
-    const y = (points[0].y + offsetY - bounds.y) * scale;
-    ctx.lineTo(x, y)
-  }
   ctx.stroke();
 }
 
@@ -105,6 +105,7 @@ export function renderOperation(
   try {
     ctx.globalCompositeOperation = op.isErasing ? 'destination-out' : 'source-over';
     ctx.fillStyle = FOG_COLOR;
+    ctx.strokeStyle = FOG_COLOR;
     switch (op.type) {
       case 'brush':
         renderBrush(ctx, op, bounds, scale, offsetX, offsetY);

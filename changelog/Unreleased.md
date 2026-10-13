@@ -51,3 +51,5 @@
 - A scene that fails to open no longer leaves the previous scene's tokens on screen
 - The command palette no longer takes focus back after you close it
 - Without graphics acceleration, areas that two tokens see are no longer black for players
+- The fog brush paints and reveals an even stroke while you drag it, where a slow stroke showed a pattern of half-covered dots until it was let go
+- The first fog stroke after all fog was deleted shows while you draw it, where it appeared only once let go
